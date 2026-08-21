@@ -80,7 +80,7 @@ jobs:
         run: |
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          
+
   deploy:
     name: Deploy to Kubernetes
     runs-on: [ self-hosted, linux, x64 ]
@@ -95,13 +95,18 @@ jobs:
           kubectl cluster-info
           kubectl get nodes
 
-      - name: Deploy application
+      - name: Apply Kubernetes manifests
         run: |
           kubectl apply -f k8s/configmap.yaml
           kubectl apply -f k8s/secret.yaml
           kubectl apply -f k8s/service.yaml
           kubectl apply -f k8s/deployment.yaml
           kubectl apply -f k8s/hpa.yaml
+
+      - name: Deploy commit image
+        run: |
+          kubectl set image deployment/devops-platform \
+            devops-platform=ghcr.io/hamid2010/devops-platform:${{ github.sha }}
 
       - name: Wait for rollout
         run: |
@@ -112,3 +117,9 @@ jobs:
           kubectl get pods -o wide
           kubectl get deployment devops-platform
           kubectl get hpa
+
+      - name: Show deployed image
+        run: |
+          kubectl get deployment devops-platform \
+            -o jsonpath='{.spec.template.spec.containers[0].image}'
+          echo
