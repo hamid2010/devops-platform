@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: devops-platform
+  labels:
+    app: devops-platform
+
+spec:
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: devops-platform
+
+  template:
+    metadata:
+      labels:
+        app: devops-platform
+
+    spec:
+      containers:
+        - name: devops-platform
+          image: devops-platform:1.1
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 8000
+
+          env:
+            - name: ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: devops-platform-config
+                  key: ENVIRONMENT
+
+            - name: APP_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: devops-platform-config
+                  key: APP_VERSION
+
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: devops-platform-config
+                  key: LOG_LEVEL
+
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: devops-platform-secret
+                  key: API_KEY
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 20
+
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
